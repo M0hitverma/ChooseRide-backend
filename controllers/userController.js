@@ -23,7 +23,7 @@ module.exports.registerUser = async (req, res, next) => {
       email,
       password: hashPassword,
     });
-    const token = await user.generateAuthToken();
+    const token = user.generateAuthToken();
     return res.status(201).json({ ok: true, user: user, token: token });
   } catch (error) {
     return res
@@ -59,8 +59,7 @@ module.exports.loginUser = async (req, res, next) => {
 
 module.exports.getUserProfile = async (req, res, next) => {
   try {
-    const user = await userModel.findById(req.userId);
-    return res.status(200).json({ ok: true, user });
+    return res.status(200).json({ ok: true, user: req.user });
   } catch (error) {
     return res
       .status(500)
