@@ -2,6 +2,7 @@ const userModel = require("../models/userSchema");
 const userService = require("../services/userService");
 const { validationResult } = require("express-validator");
 const blockedTokenModel = require("../models/blockedTokenSchema");
+
 module.exports.registerUser = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -23,8 +24,14 @@ module.exports.registerUser = async (req, res, next) => {
       email,
       password: hashPassword,
     });
-    const token = await user.generateAuthToken();
-    return res.status(201).json({ ok: true, user: user, token: token });
+    const token = user.generateAuthToken();
+    const refreshToken = user.generateRefreshToken();
+    await user.updateOne({ refreshToken });
+    res.cookie("token", token);
+    res.cookie("refreshToken", refreshToken);
+    return res
+      .status(201)
+      .json({ ok: true, user: user, message: "User created successfully" });
   } catch (error) {
     return res
       .status(500)
@@ -48,8 +55,12 @@ module.exports.loginUser = async (req, res, next) => {
     }
 
     const token = user.generateAuthToken();
+    const refreshToken = user.generateRefreshToken();
+
+    await user.updateOne({ refreshToken });
+    res.cookie("refreshToken", refreshToken);
     res.cookie("token", token);
-    return res.status(200).json({ ok: true, token, user });
+    return res.status(200).json({ ok: true, token, user, message: "Login Successfully" });
   } catch (error) {
     return res
       .status(500)
@@ -59,8 +70,7 @@ module.exports.loginUser = async (req, res, next) => {
 
 module.exports.getUserProfile = async (req, res, next) => {
   try {
-    const user = await userModel.findById(req.userId);
-    return res.status(200).json({ ok: true, user });
+    return res.status(200).json({ ok: true, user: req.user });
   } catch (error) {
     return res
       .status(500)
@@ -71,14 +81,41 @@ module.exports.getUserProfile = async (req, res, next) => {
 module.exports.logoutUser = async (req, res, next) => {
   try {
     res.clearCookie("token");
+    res.clearCookie("refreshToken");
     const token = req.cookies.token;
     await blockedTokenModel.create({
       token,
     });
+    await userService.updateUser({
+      userId: req.user._id,
+      updateUser: { refreshToken: null },
+    });
+
     return res.status(200).json({ ok: true, message: "Logout Successfully" });
   } catch (error) {
     return res
       .status(500)
       .json({ ok: false, message: "Interval server error", error });
+  }
+};
+
+module.exports.refreshToken = async (req, res, next) => {
+  const refreshToken = req.cookies.refreshToken;
+  if (!refreshToken) {
+    return res.status(403).json({ ok: false, message: "Forbidden" });
+  }
+  try {
+    const decode = userModel.verifyToken(refreshToken);
+    const user = await userModel.findById(decode._id).select("+refreshToken");
+    if (!user || user.refreshToken !== refreshToken) {
+      return res.status(403).json({ ok: false, message: "Forbidden" });
+    }
+    const token = user.generateAuthToken();
+    res.cookie("token", token);
+    return res.status(200).json({ ok: true, message: "Token Refreshed" });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ ok: false, message: "Internal server error", error });
   }
 };

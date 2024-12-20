@@ -6,7 +6,6 @@ module.exports.createUser = async ({
   email,
   password,
 }) => {
-
   if (!firstname || !email || !password) {
     throw new Error("All fields are requireds");
   }
@@ -18,6 +17,13 @@ module.exports.createUser = async ({
     email,
     password,
   });
-  
+
   return user;
 };
+
+module.exports.updateUser = async ({userId, updateUser})=>{
+  if(!userId || !updateUser){
+    throw new Error("All fields are required");
+  }
+  return userModel.findByIdAndUpdate(userId, { $set: updateUser});
+}
