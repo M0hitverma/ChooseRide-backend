@@ -48,4 +48,6 @@ router.get("/profile", authMiddleware.authCaption, captionController.getCaptionP
 
 //Logout Caption
 router.get("/logout", authMiddleware.authCaption, captionController.logoutCaption);
+
+router.post("/refresh-token", captionController.refreshToken)
 module.exports = router;

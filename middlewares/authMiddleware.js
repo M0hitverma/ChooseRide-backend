@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const captionModel = require('../models/captionSchema');
 const userModel = require('../models/userSchema');
 const blockedTokenModel = require("../models/blockedTokenSchema");
+const {config} = require("../config");
 module.exports.authUser = async (req, res, next) => {
   const token = req.cookies?.token;
 
@@ -9,7 +10,7 @@ module.exports.authUser = async (req, res, next) => {
     return res.status(401).json({ ok: false, message: "Unauthorized access" });
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.JWT_SECRET);
     req.user = await userModel.findById(decoded._id);
     next();
   } catch (error) {
@@ -23,7 +24,7 @@ module.exports.authCaption = async (req, res, next) => {
     return res.status(400).json({ ok: false, message: "Unauthorized access" });
   }
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, config.JWT_SECRET);
     req.caption = await captionModel.findById(decoded._id);
     next();
   } catch (error) {

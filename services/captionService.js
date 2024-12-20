@@ -36,3 +36,9 @@ module.exports.createCaption = async ({
   });
   return caption;
 };
+module.exports.updateCaption= async({captionId, updateCaption})=>{
+      if(!captionId || !updateCaption){
+        throw new Error("All fields are required");
+      }
+      return captionModel.findByIdAndUpdate(captionId, { $set: updateCaption})
+}

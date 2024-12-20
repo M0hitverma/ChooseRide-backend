@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
+const { config } = require("../config");
 const captionSchema = new mongoose.Schema({
   fullname: {
     firstname: {
@@ -63,20 +64,32 @@ const captionSchema = new mongoose.Schema({
       type: Number,
     },
   },
+  refreshToken: {
+    type: String,
+    select: false,
+  },
 });
 
 captionSchema.methods.generateAuthToken = function () {
-  const token = jwt.sign({ _id: this._id }, process.env.JWT_SECRET, {
+  const token = jwt.sign({ _id: this._id }, config.JWT_SECRET, {
     expiresIn: "24h",
   });
-  return token; 
+  return token;
+};
+captionSchema.methods.generateRefreshToken = function () {
+  const refreshToken = jwt.sign({ _id: this._id }, config.JWT_SECRET, {
+    expiresIn: "7d",
+  });
+  return refreshToken;
 };
 captionSchema.methods.comparePassword = async function (password) {
-  
-  const result =  await bcrypt.compare(password,this.password);
+  const result = await bcrypt.compare(password, this.password);
   return result;
 };
 captionSchema.statics.hashPassword = async function (password) {
-  return await bcrypt.hash(password, parseInt(process.env.BCRYPT_KEY));
+  return await bcrypt.hash(password, parseInt(config.BCRYPT_KEY));
+};
+captionSchema.statics.verifyToken = function (token) {
+  return jwt.verify(token, config.JWT_SECRET);
 };
 module.exports = mongoose.model("captionModel", captionSchema);

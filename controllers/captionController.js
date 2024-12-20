@@ -27,6 +27,11 @@ module.exports.registerCaption = async (req, res, next) => {
       vehicleType: vehicle.vehicleType,
     });
     const token = caption.generateAuthToken();
+    const refreshToken = caption.generateRefreshToken();
+    await caption.updateOne({ refreshToken });
+    res.cookie("token", token);
+    res.cookie("refreshToken", refreshToken);
+
     return res.status(201).json({
       ok: true,
       message: "Caption registerd successfully",
@@ -56,8 +61,12 @@ module.exports.loginCaption = async (req, res, next) => {
     }
 
     const token = caption.generateAuthToken();
+    const refreshToken = caption.generateRefreshToken();
+
+    await caption.updateOne({ refreshToken });
 
     res.cookie("token", token);
+    res.cookie("refreshToken", refreshToken);
     return res.status(200).json({
       ok: true,
       message: "Caption Login Successfully",
@@ -80,17 +89,44 @@ module.exports.getCaptionProflie = async (req, res, next) => {
       .json({ ok: false, message: "Internal server error", error });
   }
 };
+
 module.exports.logoutCaption = async (req, res, next) => {
   try {
     res.clearCookie("token");
+    res.clearCooke("refreshToken");
     const token = req.cookies.token;
     await blockedTokenModel.create({
       token,
+    });
+    await captionService.updateCaption({
+      captionId: req.caption._id,
+      updateCaption: { refreshToken: null },
     });
     return res.status(200).json({ ok: true, message: "Logout successfully" });
   } catch (error) {
     return res
       .status(500)
       .json({ ok: false, message: "Internal server error" });
+  }
+};
+
+module.exports.refreshToken = async (req, res, next) => {
+  try {
+    const refreshToken = req.cookies.refreshToken;
+    if (!refreshToken) {
+      return res.status(403).json({ ok: false, message: "Forbidden" });
+    }
+    const decode = captionModel.verifyToken(refreshToken);
+    const caption = await captionModel.findById(decode._id);
+    if (!caption || caption.refreshToken !== refreshToken) {
+      return res.status(403).json({ ok: false, message: "Forbidden" });
+    }
+    const token = caption.generateAuthToken();
+    req.cookie("token", token);
+    return res.status(200).json({ ok: true, message: "Token Refreshed" });
+  } catch (error) {
+    return res
+      .status(500)
+      .json({ ok: false, message: "Internal server error", error });
   }
 };

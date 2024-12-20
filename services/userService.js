@@ -20,3 +20,10 @@ module.exports.createUser = async ({
 
   return user;
 };
+
+module.exports.updateUser = async ({userId, updateUser})=>{
+  if(!userId || !updateUser){
+    throw new Error("All fields are required");
+  }
+  return userModel.findByIdAndUpdate(userId, { $set: updateUser});
+}
